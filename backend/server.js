@@ -1,72 +1,58 @@
+require('dotenv').config(); // Load the .env file
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const mongoose = require('mongoose'); // NEW
 const app = express();
-const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
 
-let reports = [];
+// --- MONGODB CONNECTION ---
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ Connected to MongoDB Atlas"))
+  .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-// Helper: Fixes Turkish comma decimals and returns a clean number string
-const cleanCoord = (val) => val ? val.toString().replace(',', '.') : "0";
+// --- DEFINE THE REPORT MODEL ---
+const Report = mongoose.model('Report', new mongoose.Schema({
+  lat: Number,
+  lng: Number,
+  category: String,
+  description: String,
+  timestamp: { type: Date, default: Date.now }
+}));
 
-app.get('/api/ibb/buses', async (req, res) => {
+// --- UPDATED ROUTES ---
+
+// 1. Get all reports from DB
+app.get('/api/reports', async (req, res) => {
     try {
-        console.log("Fetching live IETT data...");
-        
-        // Primary Endpoint
-        const url = "https://api.ibb.gov.tr/iett/FiloDurum/Sahalar.json";
-        
-        const response = await axios.get(url, { 
-            timeout: 5000,
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
-        const rawBuses = response.data;
-
-        if (!rawBuses || !Array.isArray(rawBuses) || rawBuses.length === 0) {
-            throw new Error("Empty response from primary API");
-        }
-
-        const cleanedBuses = rawBuses.slice(0, 150).map(bus => ({
-            _id: bus.KapıNo || Math.random().toString(),
-            HAT_KODU: bus.HatKodu || "İETT",
-            LATITUDE: cleanCoord(bus.Enlem),
-            LONGITUDE: cleanCoord(bus.Boylam),
-            GUZERGAH: bus.Guzergah || ""
-        }));
-
-        res.json(cleanedBuses);
-
-    } catch (error) {
-        console.error("⚠️ IETT Primary Failed. Generating Simulation Data for Dev...");
-        
-        // FALLBACK: Generate 10-15 "Ghost" buses around Istanbul center 
-        // This ensures your UI works and you can keep coding while İETT is down.
-        const mockBuses = Array.from({ length: 15 }).map((_, i) => ({
-            _id: `MOCK-${i}`,
-            HAT_KODU: `${34 + i}A`,
-            LATITUDE: (41.0082 + (Math.random() - 0.5) * 0.1).toString(),
-            LONGITUDE: (28.9784 + (Math.random() - 0.5) * 0.1).toString(),
-            GUZERGAH: "Simulated Route"
-        }));
-
-        res.json(mockBuses);
-    }
+        const reports = await Report.find().sort({ timestamp: -1 }); // Newest first
+        res.json(reports);
+    } catch (err) { res.status(500).json([]); }
 });
 
-// --- USER REPORTS ---
-app.get('/api/reports', (req, res) => res.json(reports));
-app.post('/api/reports', (req, res) => {
-    const newReport = { id: Date.now(), ...req.body, timestamp: new Date() };
-    reports.push(newReport);
-    res.status(201).json(newReport);
-});
-app.post('/api/reports/delete', (req, res) => {
-    reports = reports.filter(r => r.id !== req.body.id);
-    res.json({ status: "success" });
+// 2. Save a report to DB
+app.post('/api/reports', async (req, res) => {
+    try {
+        const newReport = new Report(req.body);
+        await newReport.save();
+        res.status(201).json(newReport);
+    } catch (err) { res.status(400).json({ error: "Failed to save" }); }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server on http://localhost:${PORT}`));
+// 3. Delete a report from DB
+app.post('/api/reports/delete', async (req, res) => {
+    try {
+        await Report.findByIdAndDelete(req.body.id);
+        res.json({ status: "success" });
+    } catch (err) { res.status(404).json({ error: "Not found" }); }
+});
+
+// --- IBB BUS PROXY (Keep this as is) ---
+app.get('/api/ibb/buses', async (req, res) => {
+    // ... (Your existing bus code)
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

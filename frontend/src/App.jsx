@@ -30,7 +30,10 @@ function LocationMarker({ onReportSubmit }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lat: position.lat, lng: position.lng, category, description: report }),
-    }).then(() => { setPosition(null); onReportSubmit(); });
+    }).then(() => { 
+      setPosition(null); 
+      onReportSubmit(); 
+    });
   };
 
   return position && (
@@ -56,8 +59,6 @@ function App() {
   const [liveBuses, setLiveBuses] = useState([]);
   const [map, setMap] = useState(null);
   const [weather, setWeather] = useState({ temp: "--" });
-  
-  // NEW: Search States
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
@@ -72,7 +73,6 @@ function App() {
     return () => clearInterval(bInterval);
   }, []);
 
-  // --- NEW: Search Handler ---
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery || !map) return;
@@ -85,14 +85,13 @@ function App() {
     setIsSearching(false);
   };
 
-  // --- NEW: Delete Handler ---
   const handleResolve = async (e, id) => {
-    e.stopPropagation(); // Stops FlyTo from firing
+    e.stopPropagation(); 
     try {
       await fetch('http://localhost:5000/api/reports/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id }), // MongoDB uses _id, but our backend expects 'id' in the body
       });
       fetchReports();
     } catch (err) { console.error("Delete failed"); }
@@ -115,7 +114,6 @@ function App() {
 
       <div className="main-layout">
         <aside className="sidebar">
-          {/* SEARCH BAR */}
           <form className="search-container" onSubmit={handleSearch}>
             <input 
               className="search-input" 
@@ -138,10 +136,10 @@ function App() {
 
           <div className="report-feed">
             {allReports.map(rep => (
-              <div key={rep.id} className="report-card" onClick={() => map.flyTo([rep.lat, rep.lng], 16)}>
+              <div key={rep._id} className="report-card" onClick={() => map.flyTo([rep.lat, rep.lng], 16)}>
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <strong>{rep.category}</strong>
-                  <button className="resolve-btn" onClick={(e) => handleResolve(e, rep.id)}>
+                  <button className="resolve-btn" onClick={(e) => handleResolve(e, rep._id)}>
                     <Check size={14} />
                   </button>
                 </div>
@@ -158,13 +156,20 @@ function App() {
           <MapContainer center={[41.0082, 28.9784]} zoom={12} className="leaflet-container" ref={setMap}>
             <TileLayer url={theme === 'dark' ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"} />
             <LocationMarker onReportSubmit={fetchReports} />
+            
             {liveBuses.map(bus => (
               <Marker key={bus._id} position={[bus.LATITUDE, bus.LONGITUDE]} icon={busIcon}>
                 <Popup>Line: {bus.HAT_KODU}</Popup>
               </Marker>
             ))}
+
             {allReports.map(rep => (
-              <Marker key={rep.id} position={[rep.lat, rep.lng]}><Popup>{rep.description}</Popup></Marker>
+              <Marker key={rep._id} position={[rep.lat, rep.lng]}>
+                <Popup>
+                  <strong>{rep.category}</strong>
+                  <p>{rep.description}</p>
+                </Popup>
+              </Marker>
             ))}
           </MapContainer>
         </main>

@@ -1,0 +1,17 @@
+# Ignore all node_modules everywhere
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Secrets (IMPORTANT)
+.env
+backend/.env
+
+# Build files
+dist/
+build/
+frontend/dist/
+frontend/build/
+
+# OS files
+.DS_Store
