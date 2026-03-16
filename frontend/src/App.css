@@ -86,8 +86,79 @@
   min-height: 100%;
 }
 
-/* 3. Force the Leaflet component itself to expand */
+/*  Force the Leaflet component itself to expand */
 .leaflet-container {
   height: 100% !important;
   width: 100% !important;
+}
+
+/* Sidebar Header */
+.sidebar-title {
+  margin-top: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+  font-weight: 700;
+  border-bottom: 2px solid #f1c40f;
+  padding-bottom: 5px;
+  margin-bottom: 20px;
+}
+
+/* Category Header in Card */
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Professional Report Card */
+.report-card {
+  background: white;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-left-width: 5px; /* Thicker accent line */
+  border-radius: 4px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-card:hover {
+  background: #fcfcfc;
+  border-color: #ccc;
+  transform: translateX(4px);
+}
+
+/* Status Dot Logic */
+.status-dot {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+}
+.online { background: #4caf50; }
+.offline { background: #ff5252; }
+
+.resolve-btn {
+  background: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resolve-btn:hover {
+  background: #4caf50;
+  color: white;
 }

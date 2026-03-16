@@ -36,6 +36,22 @@ app.post('/api/reports', (req, res) => {
     res.status(201).json({ status: "success", message: "Report saved!", data: newReport });
 });
 
+// DELETE a specific report by ID
+app.post('/api/reports/delete', (req, res) => {
+    const { id } = req.body;
+    const initialLength = reports.length;
+    
+    // Filter out the report with the matching ID
+    reports = reports.filter(report => report.id !== id);
+    
+    if (reports.length < initialLength) {
+        console.log(`🗑️ Report ${id} removed.`);
+        res.json({ status: "success", message: "Report resolved and removed." });
+    } else {
+        res.status(404).json({ status: "error", message: "Report not found." });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(` Backend running on http://localhost:${PORT}`);
 });
