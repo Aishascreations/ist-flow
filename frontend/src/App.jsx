@@ -6,6 +6,7 @@ import './App.css';
 function LocationMarker() {
   const [position, setPosition] = useState(null);
   const [report, setReport] = useState("");
+  const [category, setCategory] = useState("General"); // New state for category
 
   useMapEvents({
     click(e) {
@@ -15,40 +16,50 @@ function LocationMarker() {
   });
 
   const handleSubmit = () => {
-    // This sends the data to your backend server.js
     fetch('http://localhost:5000/api/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         lat: position.lat,
         lng: position.lng,
+        category: category, // Sending the category now
         description: report
       }),
     })
     .then(res => res.json())
     .then(data => {
-      alert(data.message); // "Report saved to server!"
-      setPosition(null);    // Removes the marker after successful submission
+      alert(data.message);
+      setPosition(null);
     })
-    .catch(err => {
-      console.error("Error sending report:", err);
-      alert("Failed to send report. Is the backend running?");
-    });
+    .catch(err => console.error("Error:", err));
   };
 
   return position === null ? null : (
     <Marker position={position}>
       <Popup>
-        <div style={{ minWidth: '150px' }}>
-          <strong>Report an Issue</strong> <br />
-          <small>Lat: {position.lat.toFixed(4)}, Lng: {position.lng.toFixed(4)}</small>
-          <hr />
+        <div style={{ minWidth: '180px', fontFamily: 'sans-serif' }}>
+          <strong style={{ fontSize: '1.1rem' }}>Report Issue</strong> <br />
+          
+          <label style={{ display: 'block', marginTop: '10px', fontSize: '0.8rem' }}>Category:</label>
+          <select 
+            value={category} 
+            onChange={(e) => setCategory(e.target.value)}
+            style={{ width: '100%', padding: '5px', marginBottom: '10px' }}
+          >
+            <option value="General">General</option>
+            <option value="Traffic">🚦 Traffic</option>
+            <option value="Road Work">🚧 Road Work</option>
+            <option value="Public Transport">🚌 Public Transport</option>
+            <option value="Infrastructure">🏗️ Infrastructure</option>
+          </select>
+
           <textarea 
-            placeholder="What's happening here?" 
+            placeholder="Describe the issue..." 
             value={report}
             onChange={(e) => setReport(e.target.value)}
-            style={{ width: '100%', marginTop: '5px', padding: '5px' }}
+            style={{ width: '100%', height: '60px', padding: '5px', boxSizing: 'border-box' }}
           />
+
           <button 
             onClick={handleSubmit}
             style={{ 
@@ -58,8 +69,9 @@ function LocationMarker() {
               background: '#4caf50',
               color: 'white',
               border: 'none',
-              padding: '5px',
-              borderRadius: '4px'
+              padding: '8px',
+              borderRadius: '4px',
+              fontWeight: 'bold'
             }}
           >
             Submit Report

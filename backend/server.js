@@ -12,14 +12,13 @@ app.get('/api/status', (req, res) => {
 });
 
 app.post('/api/reports', (req, res) => {
-    const { lat, lng, description } = req.body;
+    const { lat, lng, category, description } = req.body;
     
-    // For now, we just log it to the console
-    console.log(`📍 New Report Received: [${lat}, ${lng}] - ${description}`);
+    // Updated log to include the category
+    console.log(`📣 [${category}] Report at [${lat.toFixed(4)}, ${lng.toFixed(4)}]: ${description}`);
     
-    // Send a success message back to the frontend
-    res.status(201).json({ status: "success", message: "Report saved to server!" });
-});
+    res.status(201).json({ status: "success", message: `Report for ${category} saved!` });
+})
 
 app.listen(PORT, () => {
     console.log(`✅ Backend running on http://localhost:${PORT}`);
