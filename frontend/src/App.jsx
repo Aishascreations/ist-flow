@@ -1,7 +1,44 @@
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './App.css';
+
+// Component to handle clicking on the map
+function LocationMarker() {
+  const [position, setPosition] = useState(null);
+  const [report, setReport] = useState("");
+
+  const map = useMapEvents({
+    click(e) {
+      setPosition(e.latlng); // Saves the lat/lng where you clicked
+      setReport(""); // Resets the text box for a new report
+    },
+  });
+
+  return position === null ? null : (
+    <Marker position={position}>
+      <Popup>
+        <div style={{ minWidth: '150px' }}>
+          <strong>Report an Issue</strong> <br />
+          <small>Lat: {position.lat.toFixed(4)}, Lng: {position.lng.toFixed(4)}</small>
+          <hr />
+          <textarea 
+            placeholder="What's happening here?" 
+            value={report}
+            onChange={(e) => setReport(e.target.value)}
+            style={{ width: '100%', marginTop: '5px' }}
+          />
+          <button 
+            onClick={() => alert(`Report Saved: ${report}`)}
+            style={{ marginTop: '10px', width: '100%', cursor: 'pointer' }}
+          >
+            Submit Report
+          </button>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
 
 function App() {
   const [serverStatus, setServerStatus] = useState("Connecting to backend...");
@@ -17,7 +54,7 @@ function App() {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ padding: '10px', background: '#1a1a1a', color: 'white' }}>
         <h1>İst-Flow</h1>
-        <p style={{ color: serverStatus.includes('Online') ? '#4caf50' : '#ff5252' }}>
+        <p style={{ color: serverStatus.includes('Online') ? '#4caf50' : '#ff5252', margin: 0 }}>
           {serverStatus}
         </p>
       </header>
@@ -32,6 +69,8 @@ function App() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          {/* This is the new component we added */}
+          <LocationMarker />
         </MapContainer>
       </main>
     </div>
