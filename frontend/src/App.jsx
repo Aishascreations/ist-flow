@@ -3,17 +3,38 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import 'leaflet/dist/leaflet.css';
 import './App.css';
 
-// Component to handle clicking on the map
 function LocationMarker() {
   const [position, setPosition] = useState(null);
   const [report, setReport] = useState("");
 
-  const map = useMapEvents({
+  useMapEvents({
     click(e) {
-      setPosition(e.latlng); // Saves the lat/lng where you clicked
-      setReport(""); // Resets the text box for a new report
+      setPosition(e.latlng);
+      setReport(""); 
     },
   });
+
+  const handleSubmit = () => {
+    // This sends the data to your backend server.js
+    fetch('http://localhost:5000/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lat: position.lat,
+        lng: position.lng,
+        description: report
+      }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message); // "Report saved to server!"
+      setPosition(null);    // Removes the marker after successful submission
+    })
+    .catch(err => {
+      console.error("Error sending report:", err);
+      alert("Failed to send report. Is the backend running?");
+    });
+  };
 
   return position === null ? null : (
     <Marker position={position}>
@@ -26,11 +47,20 @@ function LocationMarker() {
             placeholder="What's happening here?" 
             value={report}
             onChange={(e) => setReport(e.target.value)}
-            style={{ width: '100%', marginTop: '5px' }}
+            style={{ width: '100%', marginTop: '5px', padding: '5px' }}
           />
           <button 
-            onClick={() => alert(`Report Saved: ${report}`)}
-            style={{ marginTop: '10px', width: '100%', cursor: 'pointer' }}
+            onClick={handleSubmit}
+            style={{ 
+              marginTop: '10px', 
+              width: '100%', 
+              cursor: 'pointer',
+              background: '#4caf50',
+              color: 'white',
+              border: 'none',
+              padding: '5px',
+              borderRadius: '4px'
+            }}
           >
             Submit Report
           </button>
@@ -69,7 +99,6 @@ function App() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {/* This is the new component we added */}
           <LocationMarker />
         </MapContainer>
       </main>
