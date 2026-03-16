@@ -1,19 +1,20 @@
-require('dotenv').config(); // Load the .env file
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-const mongoose = require('mongoose'); // NEW
+const mongoose = require('mongoose');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// --- MONGODB CONNECTION ---
+// --- LOCAL MONGODB CONNECTION ---
+// Make sure your .env has: MONGO_URI=mongodb://127.0.0.1:27017/istflow
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB Atlas"))
-  .catch(err => console.error("❌ MongoDB Connection Error:", err));
+  .then(() => console.log("✅ Connected to LOCAL MongoDB"))
+  .catch(err => console.error("❌ Local Connection Error:", err));
 
-// --- DEFINE THE REPORT MODEL ---
+// --- REPORT MODEL ---
 const Report = mongoose.model('Report', new mongoose.Schema({
   lat: Number,
   lng: Number,
@@ -22,37 +23,49 @@ const Report = mongoose.model('Report', new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 }));
 
-// --- UPDATED ROUTES ---
+// --- ROUTES ---
 
-// 1. Get all reports from DB
+// 1. Get all reports
 app.get('/api/reports', async (req, res) => {
-    try {
-        const reports = await Report.find().sort({ timestamp: -1 }); // Newest first
-        res.json(reports);
-    } catch (err) { res.status(500).json([]); }
+  try {
+    const reports = await Report.find().sort({ timestamp: -1 });
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// 2. Save a report to DB
+// 2. Save a report
 app.post('/api/reports', async (req, res) => {
-    try {
-        const newReport = new Report(req.body);
-        await newReport.save();
-        res.status(201).json(newReport);
-    } catch (err) { res.status(400).json({ error: "Failed to save" }); }
+  try {
+    const newReport = await Report.create(req.body);
+    console.log("📍 New Pin Saved Local!");
+    res.status(201).json(newReport);
+  } catch (err) {
+    res.status(400).json({ error: "Save failed" });
+  }
 });
 
-// 3. Delete a report from DB
+// 3. Delete a report
 app.post('/api/reports/delete', async (req, res) => {
-    try {
-        await Report.findByIdAndDelete(req.body.id);
-        res.json({ status: "success" });
-    } catch (err) { res.status(404).json({ error: "Not found" }); }
+  try {
+    await Report.findByIdAndDelete(req.body.id);
+    res.json({ status: "success" });
+  } catch (err) {
+    res.status(404).json({ error: "Delete failed" });
+  }
 });
 
-// --- IBB BUS PROXY (Keep this as is) ---
+// --- IBB BUS PROXY ---
 app.get('/api/ibb/buses', async (req, res) => {
-    // ... (Your existing bus code)
+  try {
+    const response = await axios.get('https://api.ibb.gov.tr/iett/FiloYonetimMerkezi/GetFiloAracKonum_JSON');
+    res.json(response.data);
+  } catch (error) {
+    console.log("🚌 IBB API Down - Sending empty list");
+    res.json([]); 
+  }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Local Server running on port ${PORT}`));

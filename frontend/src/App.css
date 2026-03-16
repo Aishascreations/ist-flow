@@ -120,3 +120,32 @@ body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 
 .animate-spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Custom Pin Styling */
+.custom-marker {
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-45deg); /* Creates the "pin" point */
+  border: 2px solid white;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.custom-marker svg {
+  transform: rotate(45deg); /* Flips the icon back upright */
+}
+
+/* Sidebar Badge Styling */
+.badge-general { color: #3498db; }
+.badge-traffic { color: #f1c40f; }
+.badge-accident { color: #e74c3c; }
+
+.report-card {
+  border-left: 4px solid #3498db; /* Default border */
+}
+
+.report-card:has(.badge-traffic) { border-left-color: #f1c40f; }
+.report-card:has(.badge-accident) { border-left-color: #e74c3c; }
