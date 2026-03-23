@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import { Check, Search, Loader2, Activity, Moon, Sun, Navigation, AlertTriangle, Car, Info } from 'lucide-react';
+import { Check, Search, Loader2, Activity, Moon, Sun, Navigation, AlertTriangle, Car, Info, Pencil, Save, X } from 'lucide-react';
 import L from 'leaflet';
 import { renderToStaticMarkup } from 'react-dom/server';
 import 'leaflet/dist/leaflet.css';
@@ -41,7 +41,7 @@ const busIcon = new L.Icon({
   iconSize: [30, 30], iconAnchor: [15, 30]
 });
 
-// --- SUB-COMPONENT: CLICK TO REPORT (FIXED VERSION) ---
+// --- SUB-COMPONENT: CLICK TO REPORT ---
 function LocationMarker({ onReportSubmit }) {
   const [position, setPosition] = useState(null);
   const [report, setReport] = useState("");
@@ -50,7 +50,6 @@ function LocationMarker({ onReportSubmit }) {
   useMapEvents({ click(e) { setPosition(e.latlng); } });
 
   const handleSubmit = () => {
-    // NEW FIX: Prevent empty submissions or missing positions
     if (!position || !report.trim()) {
       return alert("Please select a location on the map and add a description!");
     }
@@ -71,13 +70,10 @@ function LocationMarker({ onReportSubmit }) {
     })
     .then(() => { 
       setPosition(null); 
-      setReport(""); // NEW FIX: Clear the text box after success
-      onReportSubmit(); // Refresh the markers
+      setReport(""); 
+      onReportSubmit(); 
     })
-    .catch(err => {
-      console.error("Submission Error:", err);
-      alert("Error: Backend is not responding. Is server.js running?");
-    });
+    .catch(err => console.error("Submission Error:", err));
   };
 
   return position && (
@@ -103,14 +99,19 @@ function LocationMarker({ onReportSubmit }) {
 }
 
 // --- MAIN APPLICATION ---
-function App() {
+export default function App() {
   const [theme, setTheme] = useState('dark');
   const [allReports, setAllReports] = useState([]);
   const [liveBuses, setLiveBuses] = useState([]);
+  const [busCount, setBusCount] = useState(0);
   const [map, setMap] = useState(null);
   const [weather, setWeather] = useState({ temp: "--" });
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Update/Edit States
+  const [editingId, setEditingId] = useState(null);
+  const [tempDescription, setTempDescription] = useState("");
 
   const fetchReports = () => {
     fetch('http://localhost:5000/api/reports')
@@ -122,8 +123,14 @@ function App() {
   const fetchBuses = () => {
     fetch('http://localhost:5000/api/ibb/buses')
       .then(r => r.json())
-      .then(setLiveBuses)
-      .catch(() => setLiveBuses([]));
+      .then(data => {
+        setLiveBuses(data.data || []);
+        setBusCount(data.count || 0);
+      })
+      .catch(() => {
+        setLiveBuses([]);
+        setBusCount(0);
+      });
   };
 
   useEffect(() => {
@@ -142,8 +149,35 @@ function App() {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery} Istanbul&limit=1`);
       const data = await res.json();
       if (data[0]) map.flyTo([data[0].lat, data[0].lon], 15);
-    } catch (err) { console.error("Search failed"); }
+    } catch (err) { console.error("Search failed", err); }
     setIsSearching(false);
+  };
+
+  const handleGPS = () => { if (map) map.locate().on("locationfound", (e) => map.flyTo(e.latlng, 15)); };
+
+const handleUpdateSubmit = async (id) => {
+    if (!tempDescription.trim()) return;
+    try {
+      // 1. Send the data to your Node.js server
+      await fetch(`http://localhost:5000/api/reports/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: tempDescription }),
+      });
+
+      // 2. Turn off the "Editing" mode in the UI
+      setEditingId(null);
+
+      // 3. Refresh the sidebar and map markers from MongoDB
+      fetchReports();
+
+      // 4. Let the user know it worked!
+      alert("Report updated successfully! "); 
+
+    } catch (err) { 
+      console.error("Update failed", err); 
+      alert("Something went wrong. Is the server running?");
+    }
   };
 
   const handleResolve = async (e, id) => {
@@ -157,8 +191,6 @@ function App() {
       fetchReports();
     } catch (err) { console.error("Delete failed"); }
   };
-
-  const handleGPS = () => { if (map) map.locate().on("locationfound", (e) => map.flyTo(e.latlng, 15)); };
 
   return (
     <div className="app-container">
@@ -176,12 +208,7 @@ function App() {
       <div className="main-layout">
         <aside className="sidebar">
           <form className="search-container" onSubmit={handleSearch}>
-            <input 
-              className="search-input" 
-              placeholder="Search e.g. Kadikoy..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-            />
+            <input className="search-input" placeholder="Search Kadikoy..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             <button type="submit" className="search-btn">
               {isSearching ? <Loader2 className="animate-spin" size={16}/> : <Search size={16}/>}
             </button>
@@ -190,8 +217,14 @@ function App() {
           <div className="stats-box">
             <div className="stats-header"><Activity size={12}/> SYSTEM STATUS</div>
             <div className="stats-grid">
-              <div className="stat-item"><span className="stat-val">{liveBuses.length}</span><span className="stat-label">BUSES</span></div>
-              <div className="stat-item"><span className="stat-val">{allReports.length}</span><span className="stat-label">REPORTS</span></div>
+              <div className="stat-item">
+                <span className="stat-val">{busCount}</span>
+                <span className="stat-label">BUSES</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-val">{allReports.length}</span>
+                <span className="stat-label">REPORTS</span>
+              </div>
             </div>
           </div>
 
@@ -200,11 +233,45 @@ function App() {
               <div key={rep._id} className="report-card" onClick={() => map.flyTo([rep.lat, rep.lng], 16)}>
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <strong className={`badge-${rep.category.toLowerCase()}`}>{rep.category}</strong>
-                  <button className="resolve-btn" onClick={(e) => handleResolve(e, rep._id)}>
-                    <Check size={14} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="resolve-btn" onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingId(rep._id);
+                        setTempDescription(rep.description);
+                    }}>
+                      <Pencil size={12} />
+                    </button>
+                    <button className="resolve-btn" onClick={(e) => handleResolve(e, rep._id)}>
+                      <Check size={14} />
+                    </button>
+                  </div>
                 </div>
-                <p>{rep.description}</p>
+
+                {editingId === rep._id ? (
+                  <div className="edit-box" onClick={(e) => e.stopPropagation()}>
+                    <textarea 
+                      className="form-textarea" 
+                      value={tempDescription} 
+                      onChange={(e) => setTempDescription(e.target.value)}
+                      autoFocus
+                    />
+                    <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                      <button className="submit-btn" onClick={() => handleUpdateSubmit(rep._id)}>
+                        <Save size={14} /> Save
+                      </button>
+                      <button className="submit-btn" style={{ background: '#555' }} onClick={() => setEditingId(null)}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p>{rep.description}</p>
+                    <small style={{ opacity: 0.5, fontSize: '10px' }}>
+                        {new Date(rep.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </small>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -216,22 +283,18 @@ function App() {
           </button>
           <MapContainer center={[41.0082, 28.9784]} zoom={12} className="leaflet-container" ref={setMap}>
             <TileLayer url={theme === 'dark' ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"} />
-            
             <LocationMarker onReportSubmit={fetchReports} />
-            
-            {liveBuses.map(bus => (
-              <Marker key={bus._id} position={[parseFloat(bus.LATITUDE), parseFloat(bus.LONGITUDE)]} icon={busIcon}>
+            {liveBuses.map((bus, idx) => (
+              <Marker key={idx} position={[parseFloat(bus.LATITUDE), parseFloat(bus.LONGITUDE)]} icon={busIcon}>
                 <Popup>Line: {bus.HAT_KODU}</Popup>
               </Marker>
             ))}
-
             {allReports.map(rep => (
               <Marker key={rep._id} position={[rep.lat, rep.lng]} icon={createCustomIcon(rep.category)}>
                 <Popup>
                   <div style={{color: 'black', minWidth: '150px'}}>
                     <strong>{rep.category}</strong>
                     <p style={{margin: '8px 0'}}>{rep.description}</p>
-                    <small style={{opacity: 0.5}}>{new Date(rep.timestamp).toLocaleTimeString()}</small>
                   </div>
                 </Popup>
               </Marker>
@@ -242,5 +305,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
