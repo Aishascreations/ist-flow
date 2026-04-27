@@ -149,3 +149,57 @@ body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
 
 .report-card:has(.badge-traffic) { border-left-color: #f1c40f; }
 .report-card:has(.badge-accident) { border-left-color: #e74c3c; }
+
+/* Container for the edit mode inside the report card */
+.edit-box {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Make the textarea blend in with your dark theme */
+.edit-box .form-textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.edit-box .form-textarea:focus {
+  border-color: #3498db;
+}
+
+/* Button styling for Save/Cancel */
+.edit-box .submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  border: none;
+  background: #3498db;
+  color: white;
+  transition: opacity 0.2s;
+}
+
+.edit-box .submit-btn:hover {
+  opacity: 0.8;
+}
+
+/* Smooth entry animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
